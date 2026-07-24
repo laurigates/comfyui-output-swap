@@ -1,0 +1,61 @@
+[project]
+name = "comfyui-output-swap"
+description = "Drag one output onto another to take over its downstream links — reroute a connection's source without hunting for the target input."
+version = "0.1.0"
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Lauri Gates" }]
+keywords = ["comfyui", "comfyui-nodes", "ui", "picker", "mobile", "touch"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: JavaScript",
+    "Topic :: Multimedia :: Graphics",
+]
+
+# Floor tied to the modern Vue canvas/pointer model. Frontend-only pack — no runtime Python deps.
+dependencies = [
+    "comfyui-frontend-package>=1.40.0",
+]
+
+[project.urls]
+Repository = "https://github.com/laurigates/comfyui-output-swap"
+Issues = "https://github.com/laurigates/comfyui-output-swap/issues"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11",
+    "pytest>=8",
+    "pre-commit>=4",
+    # tests/test_publish_hygiene.py mirrors comfy-cli's .comfyignore matching
+    "pathspec>=0.12",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 99
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.comfy]
+PublisherId = "laurigates"
+DisplayName = "Output Swap"
+# Registry display assets. The registry fetches these by URL from the repo's
+# default branch, so the PNGs must exist at the repo root on `main`. The scaffold
+# ships icon.svg / banner.svg (source form); run `just assets` (rsvg-convert) to
+# rasterize them to icon.png / banner.png and commit those before publishing.
+Icon = "https://raw.githubusercontent.com/laurigates/comfyui-output-swap/main/icon.png"
+Banner = "https://raw.githubusercontent.com/laurigates/comfyui-output-swap/main/banner.png"
+# The built frontend (web/dist/) is committed (tracked) — emitted by `bun run build`.
+# publish-node-action honors [tool.comfy] includes to force-add otherwise-
+# ignored paths into the published tarball. See ADR-0001.
+includes = ["web/dist"]

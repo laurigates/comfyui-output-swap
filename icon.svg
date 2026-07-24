@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400" role="img" aria-label="Output Swap">
+  <title>Output Swap</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f1f2a"/>
+      <stop offset="1" stop-color="#12121a"/>
+    </linearGradient>
+  </defs>
+  <rect x="28" y="28" width="344" height="344" rx="76" fill="url(#tile)" stroke="#2a2a36" stroke-width="2"/>
+  <!-- PLACEHOLDER glyph — replace with a bespoke orange (#ffb02e) pictogram. -->
+  <text x="200" y="212" fill="#ffb02e" font-family="Inter, Segoe UI, system-ui, sans-serif"
+        font-size="210" font-weight="700" text-anchor="middle" dominant-baseline="central">O</text>
+</svg>

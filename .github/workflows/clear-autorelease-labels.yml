@@ -1,0 +1,28 @@
+name: "Release: clear autorelease labels"
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  clear-labels:
+    name: Remove stale autorelease labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove autorelease:pending / autorelease:tagged from merged PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          for label in "autorelease: pending" "autorelease: tagged"; do
+            prs=$(gh pr list -R "$REPO" --state all --label "$label" --json number --jq '.[].number')
+            for pr in $prs; do
+              echo "clearing '$label' from PR #$pr"
+              gh pr edit -R "$REPO" "$pr" --remove-label "$label" || true
+            done
+          done

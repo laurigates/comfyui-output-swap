@@ -1,0 +1,21 @@
+{
+  "name": "comfyui-output-swap",
+  "private": true,
+  "type": "module",
+  "description": "Drag one output onto another to take over its downstream links — reroute a connection's source without hunting for the target input. TypeScript source in src/, built to web/dist/ via bun build. See ADR-0001.",
+  "scripts": {
+    "build": "bun build ./src/index.ts --target browser --format esm --banner '/* web/dist bundle built by bun from src/ in this repository (see package.json). No third-party code is bundled. */' --outdir web/dist --external '/scripts/*'",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check",
+    "knip": "knip"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@comfyorg/comfyui-frontend-types": "~1.45.0",
+    "@biomejs/biome": "^2.4.15",
+    "vitest": "^4.1.7",
+    "knip": "^5.0.0"
+  }
+}

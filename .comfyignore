@@ -1,0 +1,52 @@
+# .comfyignore — trims the Comfy Registry tarball to runtime-only files.
+#
+# comfy-cli builds node.zip as:  git-tracked files − .comfyignore matches
+# + [tool.comfy] includes.  Patterns use gitignore (gitwildmatch) syntax.
+# web/dist is force-shipped via `includes`, so it always survives these rules.
+#
+# Goal: ship only what ComfyUI loads at runtime (the Python backend, the
+# built web/dist bundle, pyproject metadata, README/LICENSE) and keep CI,
+# build inputs, tests, docs, and the screenshot pipeline out of the tarball.
+# The registry security scan flags a version on ANY finding, even info
+# severity — every shipped file is scan surface. tests/test_publish_hygiene.py
+# fails if a new top-level path ships unclassified; keep the two in sync.
+
+# Build inputs — only the built web/dist is served, never the TS source
+/src/
+tsconfig.json
+biome.json
+knip.json
+vitest.config.js
+package.json
+bun.lock
+uv.lock
+pylock.toml
+
+# Dev/CI tooling scripts — never runtime code (a shipped scripts/ file with
+# urllib got comfyui-sampler-info 0.1.16 flagged: info_python_network_operations)
+/scripts/
+
+# Tests
+/tests/
+
+# Docs + screenshot pipeline (Dockerfile, shell scripts, large PNGs)
+/docs/
+/screenshots/
+
+# CI, release automation, repo + agent tooling
+/.github/
+/.claude/
+.pre-commit-config.yaml
+release-please-config.json
+.release-please-manifest.json
+renovate.json
+.gitattributes
+.gitignore
+justfile
+CLAUDE.md
+RELEASE-CHECKLIST.md
+.comfyignore
+
+# Source-form display assets (the rasterized icon.png + banner.png are kept)
+icon.svg
+banner.svg
