@@ -4,13 +4,13 @@ Frontend-only ComfyUI custom-node pack in the canvas-gesture vein. `__init__.py`
 
 ## The pattern ("the vein")
 
-A mobile-first ComfyUI usability pack in the *gesture* vein: instead of intercepting a single widget, a frontend extension adds a CANVAS-LEVEL pointer layer. A two-finger pinch whose centroid lands inside a **selected** node (single tap selects it) resizes that node and suppresses the native canvas zoom for the gesture's duration. The enhancement is **additive** (no-op fallback if `app.canvas` or the pointer model is absent — native corner-handle resize still works), **touch-first**, and never breaks serialized workflows (it only writes `node.size`, which is already serialized). Pure geometry helpers are exported from `src/index.ts` and unit-tested; DOM/canvas wiring stays below them.
+A ComfyUI usability pack in the *canvas-behavior* vein: instead of intercepting a single widget, a frontend extension gives meaning to a gesture LiteGraph ignores. Dragging one output onto another node's output slot of the same type — a no-op in stock LiteGraph — makes the dragged output **take over all of the target output's downstream links** (each downstream input is re-homed to the dragged source), leaving the target output disconnected. It saves hunting down where a connection goes just to re-source it. The enhancement is **additive + fail-soft**: it hooks the `canvas.linkConnector` `dropped-on-node` event (still delivered under `quick-connections`' `processMouseUp` wrap, which calls through) and only acts when the drop lands on an output slot — every other drop falls through to native behavior. A hover affordance (takeover-output ring + dashed wires to each downstream input) is drawn via a **chained** `onDrawForeground` (never clobbering a prior handler). One boolean setting (`OutputSwap.enable`, default on) gates it. Pure helpers are exported from `src/index.ts` and unit-tested; canvas/DOM wiring stays below them.
 
 ## File layout
 
 | Path | Purpose |
 |------|---------|
-| `src/index.ts` | The extension: canvas pointer layer + exported pure geometry helpers. |
+| `src/index.ts` | The extension: LinkConnector `dropped-on-node` swap handler + chained `onDrawForeground` hint + exported pure helpers (`collectDownstream`, `performSwap`, `bezierControlDistance`, `isOutputSlotHit`). |
 | `src/comfyui-shims.d.ts` | Types the `/scripts/app.js` runtime import (via the `paths` mapping in `tsconfig.json`). |
 | `__init__.py` | Loader stub. Empty `NODE_CLASS_MAPPINGS`; exports `WEB_DIRECTORY = "./web/dist"`. |
 | `web/dist/` | **Generated** by `bun run build`, committed (tracked) so git clone/update carries it. ComfyUI serves it at `/extensions/comfyui-output-swap/`. |
@@ -32,10 +32,9 @@ A mobile-first ComfyUI usability pack in the *gesture* vein: instead of intercep
   import is left **unbundled** (resolved at runtime against ComfyUI's served
   module). See ADR-0001.
 - **No Python dependencies. The pack is frontend-only; a feature genuinely needing Python belongs in a separate companion pack.**
-- ****No modal kit.** This gesture pack has no widget to hook and no modal; it adds a canvas pointer layer with self-contained pure helpers.**
-- **Additive only.** Never clobber an existing tooltip/control; fall back to
-  the native widget when there's no match. Never fabricate data.
-- **Canvas pointer model is version-sensitive.** The pinch layer reads `app.canvas` / `ds.scale` / `ds.offset` and the pointer-event stream. Keep the no-op fallback (do nothing when they are absent) so native corner-handle resize always works.
+- **No modal kit.** This pack has no widget to hook and no modal; it hooks a canvas event and draws an overlay, with self-contained pure helpers.
+- **Additive only.** Never clobber an existing handler; chain onto `onDrawForeground` and only `preventDefault` a drop that landed on an output slot. Fall through to native behavior otherwise. Never fabricate data.
+- **LiteGraph internals are version-sensitive.** The swap reads `canvas.linkConnector` (`state.connectingTo` / `renderLinks[].node`,`.fromSlotIndex` / `events`), `node.getOutputOnPos`/`getOutputPos`/`getInputPos`/`connect`, and `graph.links`/`getNodeById` — all un-exported and minified. Keep the fail-soft fallback (do nothing when absent) so native connection behavior always works, and verify shapes against the sourcemap on a `comfyui-frontend-package` bump.
 - **Never hand-edit `CHANGELOG.md` or the `version` field** — release-please
   owns them (conventional commits drive the bump).
 
