@@ -42,9 +42,13 @@ Additive and fail-soft: it hooks the canvas connection event without clobbering
 other extensions, coexists with `quick-connections` (Circuit Board Lines), and
 only ever moves the links you asked it to.
 
-<!-- Hero screenshot: add the containerized screenshot pipeline with the
-     `comfyui-screenshot-pipeline` skill (`just screenshots`), then embed the
-     committed docs/*.png here with an italic caption, like the sibling packs. -->
+![Dragging one output onto another highlights the links about to be taken over](docs/takeover.png)
+
+*Mid-drag from Source B's output onto Source A's: the cyan ring marks the
+takeover target, and the dashed cyan wires trace every downstream input that is
+about to be re-homed — each ringed at its far end, so targets scrolled off
+screen are still accounted for. Releasing here moves both links to Source B and
+leaves Source A's output empty.*
 
 ## Compatibility
 
