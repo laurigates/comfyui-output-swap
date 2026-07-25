@@ -61,3 +61,13 @@ assets:
     # canvas size or a full-bleed tile) — see comfy-registry-lifecycle. Skipped
     # when ImageMagick's `identify` is absent (rsvg-convert is the only hard dep).
     command -v identify >/dev/null 2>&1 && { test "$(identify -format '%wx%h/%@' icon.png)" = "400x400/346x346+27+27" || { echo "icon.png off family spec (want 400x400/346x346+27+27)"; exit 1; }; } || true
+
+##########
+# Documentation artifacts
+##########
+
+# Regenerate docs/takeover.png via the containerized screenshot generator.
+[group: "docs"]
+screenshots:
+    docker build -f screenshots/Dockerfile -t comfyui-output-swap-screenshots .
+    docker run --rm -v "$(pwd)/docs:/out" comfyui-output-swap-screenshots

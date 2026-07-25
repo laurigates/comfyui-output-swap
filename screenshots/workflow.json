@@ -1,0 +1,72 @@
+{
+  "last_node_id": 4,
+  "last_link_id": 2,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "EmptyLatentImage",
+      "title": "Source A  —  currently feeds both",
+      "pos": [60, 70],
+      "size": [290, 106],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        { "name": "LATENT", "type": "LATENT", "links": [1, 2], "slot_index": 0, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "EmptyLatentImage" },
+      "widgets_values": [512, 512, 1]
+    },
+    {
+      "id": 2,
+      "type": "EmptyLatentImage",
+      "title": "Source B  —  drag this output",
+      "pos": [60, 330],
+      "size": [290, 106],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        { "name": "LATENT", "type": "LATENT", "links": null, "slot_index": 0, "shape": 3 }
+      ],
+      "properties": { "Node name for S&R": "EmptyLatentImage" },
+      "widgets_values": [768, 768, 1]
+    },
+    {
+      "id": 3,
+      "type": "LatentUpscale",
+      "pos": [540, 40],
+      "size": [315, 130],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [{ "name": "samples", "type": "LATENT", "link": 1 }],
+      "outputs": [{ "name": "LATENT", "type": "LATENT", "links": null, "shape": 3 }],
+      "properties": { "Node name for S&R": "LatentUpscale" },
+      "widgets_values": ["nearest-exact", 1024, 1024, "disabled"]
+    },
+    {
+      "id": 4,
+      "type": "LatentUpscale",
+      "pos": [540, 290],
+      "size": [315, 130],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [{ "name": "samples", "type": "LATENT", "link": 2 }],
+      "outputs": [{ "name": "LATENT", "type": "LATENT", "links": null, "shape": 3 }],
+      "properties": { "Node name for S&R": "LatentUpscale" },
+      "widgets_values": ["bilinear", 2048, 2048, "disabled"]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 3, 0, "LATENT"],
+    [2, 1, 0, 4, 0, "LATENT"]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
