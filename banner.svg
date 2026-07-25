@@ -16,8 +16,12 @@
       <stop offset="1" stop-color="#ff9a1f" stop-opacity="0"/>
     </linearGradient>
   </defs>
+
+  <!-- backdrop -->
   <rect width="1344" height="576" fill="#000000"/>
   <rect width="1344" height="576" fill="url(#glow)"/>
+
+  <!-- faint constellation network -->
   <g stroke="#ffb86b" stroke-opacity="0.13" stroke-width="1.5" fill="none">
     <path d="M470 120 L640 250 L560 400 L760 470 L900 300 L1080 180"/>
     <path d="M640 250 L900 300 M560 400 L900 300 M470 120 L560 400 M760 470 L1080 380 M900 300 L1180 250"/>
@@ -30,15 +34,33 @@
     <circle cx="1180" cy="250" r="3"/><circle cx="1080" cy="380" r="3"/>
     <circle cx="430" cy="470" r="2.5"/>
   </g>
+  <g fill="#ff9a1f" fill-opacity="0.5">
+    <circle cx="1210" cy="430" r="2"/><circle cx="980" cy="150" r="2"/>
+    <circle cx="700" cy="180" r="2"/><circle cx="520" cy="300" r="2"/>
+    <circle cx="1140" cy="470" r="2"/><circle cx="840" cy="430" r="2"/>
+  </g>
+
+  <!-- warm sweeping arc, lower third -->
   <path d="M0 520 C 360 420, 900 540, 1344 360" stroke="url(#sweep)" stroke-width="6" fill="none"/>
+
+  <!-- icon tile (the link-takeover motif from icon.svg, scaled into the left of the banner) -->
   <g transform="translate(96,188) scale(0.5)">
     <rect x="28" y="28" width="344" height="344" rx="76" fill="url(#tile)" stroke="#2a2a36" stroke-width="2"/>
-    <!-- PLACEHOLDER glyph — mirror icon.svg's bespoke pictogram here. -->
-    <text x="200" y="212" fill="#ffb02e" font-family="Inter, Segoe UI, system-ui, sans-serif"
-          font-size="210" font-weight="700" text-anchor="middle" dominant-baseline="central">O</text>
+    <rect x="66" y="108" width="88" height="62" rx="16" fill="none" stroke="#ffb02e" stroke-opacity="0.3" stroke-width="12"/>
+    <rect x="66" y="230" width="88" height="62" rx="16" fill="none" stroke="#ffb02e" stroke-width="13"/>
+    <rect x="272" y="169" width="62" height="62" rx="16" fill="none" stroke="#ffb02e" stroke-width="13"/>
+    <path d="M154,139 C204,139 214,166 238,180" fill="none" stroke="#ffb02e" stroke-opacity="0.3"
+          stroke-width="12" stroke-linecap="round" stroke-dasharray="20 20"/>
+    <path d="M154,261 C210,261 224,200 272,200" fill="none" stroke="#ffb02e"
+          stroke-width="19" stroke-linecap="round"/>
+    <circle cx="154" cy="139" r="14" fill="#12121a" stroke="#ffb02e" stroke-opacity="0.3" stroke-width="12"/>
+    <circle cx="154" cy="261" r="17" fill="#ffb02e"/>
+    <circle cx="272" cy="200" r="17" fill="#ffb02e"/>
   </g>
+
+  <!-- wordmark -->
   <text x="334" y="300" font-family="Helvetica, Arial, sans-serif" font-weight="bold"
         font-size="120" fill="#f5f5f7" letter-spacing="-2">Output Swap</text>
   <text x="340" y="372" font-family="Helvetica, Arial, sans-serif" font-weight="500"
-        font-size="44" fill="#ffb02e">Drag one output onto another to take over its downstream links — reroute a connection's source without hunting for the target input.</text>
+        font-size="44" fill="#ffb02e">Move a connection's source in one drag</text>
 </svg>
