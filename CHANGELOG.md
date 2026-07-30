@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.1...comfyui-output-swap-v0.1.2) (2026-07-30)
+
+
+### Bug Fixes
+
+* **assets:** sync the just assets recipe with the scaffold template ([#11](https://github.com/laurigates/comfyui-output-swap/issues/11)) ([1e5239c](https://github.com/laurigates/comfyui-output-swap/commit/1e5239c88d23fc333df6feff4647bd9ee30f75cf))
+
 ## [0.1.1](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.0...comfyui-output-swap-v0.1.1) (2026-07-25)
 
 
