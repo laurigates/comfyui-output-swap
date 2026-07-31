@@ -32,9 +32,31 @@ input it fed is re-homed to the dragged source — and the old output is left
 disconnected. (An input holds only one link, so each re-home cleanly replaces
 the old one.)
 
+**If the dragged node has a matching free input, it is also spliced into the
+stream** — the taken-over output is wired into it, giving `target → dragged →
+everything the target used to feed`. Dropping a filter or upscaler onto a
+loader's output puts it in the middle of the chain in one gesture, instead of
+leaving its input dangling.
+
+The splice is deliberately cautious, because guessing wrong would silently
+rewire a graph you didn't ask to touch. It only happens when:
+
+- the dragged node has **exactly one** input of a compatible type — `image1`/
+  `image2` pairs are ambiguous, so those fall back to a plain takeover;
+- that input is **empty** — it will never displace a connection you already made;
+- neither slot is a wildcard (`*`) type — reroutes and "any" switches would
+  otherwise match everything;
+- and the result would not create a **cycle**.
+
+Otherwise you get the plain takeover. Hold **Alt** while dropping to skip the
+splice for one gesture (when you want the old branch left dangling and out of
+the execution path), or turn it off entirely with the **Output swap: also
+splice** setting.
+
 While you drag, a hover affordance shows exactly what will happen: a cyan ring
-on the takeover-target output, dashed cyan wires to each downstream input, and
-a ring on each of those (possibly off-screen) input endpoints. Dropping
+on the takeover-target output, dashed cyan wires to each downstream input, a
+ring on each of those (possibly off-screen) input endpoints, and — when the
+splice applies — a finer-dashed wire back into the input it will fill. Dropping
 anywhere that isn't an output slot does nothing special — native behavior
 runs — and the whole feature toggles off via the **Output swap** setting.
 

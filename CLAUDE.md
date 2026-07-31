@@ -4,13 +4,15 @@ Frontend-only ComfyUI custom-node pack in the canvas-gesture vein. `__init__.py`
 
 ## The pattern ("the vein")
 
-A ComfyUI usability pack in the *canvas-behavior* vein: instead of intercepting a single widget, a frontend extension gives meaning to a gesture LiteGraph ignores. Dragging one output onto another node's output slot of the same type — a no-op in stock LiteGraph — makes the dragged output **take over all of the target output's downstream links** (each downstream input is re-homed to the dragged source), leaving the target output disconnected. It saves hunting down where a connection goes just to re-source it. The enhancement is **additive + fail-soft**: it hooks the `canvas.linkConnector` `dropped-on-node` event (still delivered under `quick-connections`' `processMouseUp` wrap, which calls through) and only acts when the drop lands on an output slot — every other drop falls through to native behavior. A hover affordance (takeover-output ring + dashed wires to each downstream input) is drawn via a **chained** `onDrawForeground` (never clobbering a prior handler). One boolean setting (`OutputSwap.enable`, default on) gates it. Pure helpers are exported from `src/index.ts` and unit-tested; canvas/DOM wiring stays below them.
+A ComfyUI usability pack in the *canvas-behavior* vein: instead of intercepting a single widget, a frontend extension gives meaning to a gesture LiteGraph ignores. Dragging one output onto another node's output slot of the same type — a no-op in stock LiteGraph — makes the dragged output **take over all of the target output's downstream links** (each downstream input is re-homed to the dragged source), leaving the target output disconnected. It saves hunting down where a connection goes just to re-source it. The enhancement is **additive + fail-soft**: it hooks the `canvas.linkConnector` `dropped-on-node` event (still delivered under `quick-connections`' `processMouseUp` wrap, which calls through) and only acts when the drop lands on an output slot — every other drop falls through to native behavior. A hover affordance (takeover-output ring + dashed wires to each downstream input) is drawn via a **chained** `onDrawForeground` (never clobbering a prior handler). Two boolean settings, both default on, gate it: `OutputSwap.enable` (the whole feature) and `OutputSwap.autoInsert` (the splice below). Pure helpers are exported from `src/index.ts` and unit-tested; canvas/DOM wiring stays below them.
+
+**Auto-insert.** After the takeover, the taken-over output is wired back into the dragged node's own input — `target -> source -> (everything target used to feed)` — so a takeover onto a node with no upstream does not leave that node's input dangling. It is deliberately conservative, because a wrong guess silently rewires a graph nobody asked to touch; `planInsertion` fires only when **all four** guards hold: the output type is concrete (not `*`/`""`/`0`), **exactly one** input is compatible (two `IMAGE` inputs is a coin flip — bail), that input is **free** (LiteGraph's `connectSlots` disconnects an occupied input without asking), and the splice would **not close a cycle** (nothing in the frontend guards against cycles; the graph would only fail at queue time). Otherwise the plain takeover runs. Alt-drop, or the setting, suppresses it — that is the "kill the old branch" intent, where leaving the target disconnected is the point. The splice is **previewed** in the hover hint (finer dashes than the moving links); it must be, or the same gesture does one of two things depending on slot layout the user cannot see.
 
 ## File layout
 
 | Path | Purpose |
 |------|---------|
-| `src/index.ts` | The extension: LinkConnector `dropped-on-node` swap handler + chained `onDrawForeground` hint + exported pure helpers (`collectDownstream`, `performSwap`, `bezierControlDistance`, `isOutputSlotHit`). |
+| `src/index.ts` | The extension: LinkConnector `dropped-on-node` swap handler + chained `onDrawForeground` hint + exported pure helpers (`collectDownstream`, `performSwap`, `planInsertion`, `findInsertInput`, `reachesDownstream`, `isTypeCompatible`, `isWildcardSlotType`, `bezierControlDistance`, `isOutputSlotHit`). |
 | `src/comfyui-shims.d.ts` | Types the `/scripts/app.js` runtime import (via the `paths` mapping in `tsconfig.json`). |
 | `__init__.py` | Loader stub. Empty `NODE_CLASS_MAPPINGS`; exports `WEB_DIRECTORY = "./web/dist"`. |
 | `web/dist/` | **Generated** by `bun run build`, committed (tracked) so git clone/update carries it. ComfyUI serves it at `/extensions/comfyui-output-swap/`. |
@@ -34,7 +36,7 @@ A ComfyUI usability pack in the *canvas-behavior* vein: instead of intercepting 
 - **No Python dependencies. The pack is frontend-only; a feature genuinely needing Python belongs in a separate companion pack.**
 - **No modal kit.** This pack has no widget to hook and no modal; it hooks a canvas event and draws an overlay, with self-contained pure helpers.
 - **Additive only.** Never clobber an existing handler; chain onto `onDrawForeground` and only `preventDefault` a drop that landed on an output slot. Fall through to native behavior otherwise. Never fabricate data.
-- **LiteGraph internals are version-sensitive.** The swap reads `canvas.linkConnector` (`state.connectingTo` / `renderLinks[].node`,`.fromSlotIndex` / `events`), `node.getOutputOnPos`/`getOutputPos`/`getInputPos`/`connect`, and `graph.links`/`getNodeById` — all un-exported and minified. Keep the fail-soft fallback (do nothing when absent) so native connection behavior always works, and verify shapes against the sourcemap on a `comfyui-frontend-package` bump.
+- **LiteGraph internals are version-sensitive.** The swap reads `canvas.linkConnector` (`state.connectingTo` / `renderLinks[].node`,`.fromSlotIndex` / `events`), `node.getOutputOnPos`/`getOutputPos`/`getInputPos`/`connect`, `node.inputs[].link`/`.type`, `node.outputs[].links`/`.type`, `canvas.pointer.eMove.altKey`, `window.LiteGraph.isValidConnection`, and `graph.links`/`getNodeById` — all un-exported and minified. Keep the fail-soft fallback (do nothing when absent) so native connection behavior always works, and verify shapes against the sourcemap on a `comfyui-frontend-package` bump. See the Verified frontend API table below.
 - **Never hand-edit `CHANGELOG.md` or the `version` field** — release-please
   owns them (conventional commits drive the bump).
 
@@ -76,6 +78,23 @@ minified `.js`:
 cd .venv/lib/python*/site-packages/comfyui_frontend_package/static/assets
 grep -l 'LGraphGroup' *.js.map        # find the chunk
 ```
+
+### Verified frontend API
+
+Confirmed against the `sourcesContent` of the LiteGraph chunk at
+`comfyui-frontend-package` 1.45.x (the chunk `grep -l 'LGraphGroup' *.js.map`
+finds — it was `promotionUtils-*.js.map`, not `api-*`, so grep rather than
+assume). Recheck on a bump:
+
+| Fact | Where | Why it matters here |
+|------|-------|---------------------|
+| `connect()` returns `null` for `target_node == this` | `LGraphNode.ts` "avoid loopback" | A node already fed by the takeover target keeps its link — the swap degrades to an insert for free, and no self-link is ever made. |
+| `connectSlots()` calls `disconnectInput` when `inputs[i].link != null` | `LGraphNode.ts` "if there is something already plugged there" | Silent, no return-value signal — hence auto-insert only fills **free** inputs. |
+| `LGraph` has **no** cycle/ancestry check on connect | `LGraph.ts` (absence) | Nothing stops a splice from closing a loop; `reachesDownstream` is ours to run. |
+| `isValidConnection` folds `""` / `"*"` / `0` to a wildcard, lowercases, and splits `,` unions | `LiteGraphGlobal.ts` | A `*` input matches every drop — auto-insert refuses to guess through one. |
+| ComfyUI publishes `window.LiteGraph` (`useGlobalLitegraph`) | app bundle | Lets the pack use the real `isValidConnection`, with a local mirror as fallback. |
+| `dropped-on-node` detail is `{ node, event }`, `event` a `CanvasPointerEvent` | `canvas/LinkConnector.ts` `connectToNode` | Carries `canvasX`/`canvasY` **and** the modifier keys (`altKey`). |
+| `canvas.pointer` is a `CanvasPointer`; `.eMove` is the live drag's pointermove | `LGraphCanvas.ts` / `CanvasPointer.ts` | Reads Alt mid-drag for the hover hint without adding a global key listener. |
 
 Facts worth confirming this way (recheck on a `comfyui-frontend-package` bump):
 `LiteGraph.NODE_TITLE_HEIGHT` (30); `canvas.selectedItems` is a

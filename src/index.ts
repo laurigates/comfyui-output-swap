@@ -13,6 +13,16 @@
 // leaving the target output disconnected. It saves hunting down where a
 // connection goes just to re-source it.
 //
+// Auto-insert: after the takeover, the dragged node is spliced INTO the stream
+// it just stole — the taken-over output is wired back into the dragged node's
+// own input, giving `target -> source -> (everything target used to feed)`.
+// Without it a takeover onto a node that had no upstream leaves that node's
+// input dangling, which is almost never what the drag meant. The splice is
+// deliberately conservative (see planInsertion): it only fires when the input
+// is unambiguous, free, concretely typed, and cycle-free — otherwise the plain
+// takeover runs. Hold Alt during the drop, or turn off the OutputSwap.autoInsert
+// setting, to suppress it (the "kill the old branch" intent).
+//
 // Additive + fail-soft: it hooks the LinkConnector 'dropped-on-node' event
 // (still delivered under quick-connections' processMouseUp wrap, which calls
 // through) and only acts when the drop lands on an output slot — every other
@@ -32,6 +42,7 @@ import { app } from "/scripts/app.js";
 
 const EXT_NAME = "comfyui-output-swap";
 const SETTING_ID = "OutputSwap.enable";
+const AUTO_INSERT_SETTING_ID = "OutputSwap.autoInsert";
 
 // Highlight colour for the takeover affordance. Distinct from LiteGraph's
 // native input-slot hover marker (a solid gold #ffcc00 dot) so the two read
@@ -52,13 +63,28 @@ const CONTROL_FACTOR = 0.25;
 
 type Vec2 = [number, number];
 
+/**
+ * A LiteGraph slot type: a node-type string ("IMAGE"), a comma-separated union
+ * ("IMAGE,LATENT"), or the wildcard forms ("", "*", 0 — LiteGraph.isValidConnection
+ * folds all three into "matches anything").
+ */
+export type SlotType = string | number | null | undefined;
+
 interface OutputSlot {
+  type?: SlotType;
   links?: Array<number | string> | null;
+}
+
+/** `link` is the id of the single incoming link, or null/undefined when free. */
+interface InputSlot {
+  type?: SlotType;
+  link?: number | string | null;
 }
 
 interface LiteNode {
   title?: string;
   graph?: LiteGraph;
+  inputs?: InputSlot[];
   outputs?: OutputSlot[];
   getOutputOnPos?(pos: Vec2): OutputSlot | undefined;
   getOutputPos(index: number): Vec2;
@@ -102,6 +128,9 @@ interface LiteCanvas {
   linkConnector?: LinkConnectorLike;
   graph?: LiteGraph;
   graph_mouse?: Vec2;
+  // CanvasPointer.eMove — the latest pointermove of the ongoing drag. Read only
+  // for its modifier state, so the hover hint agrees with what a drop would do.
+  pointer?: { eMove?: { altKey?: boolean } };
   onDrawForeground?: ((ctx: CanvasRenderingContext2D, area?: unknown) => void) | null;
 }
 
@@ -176,14 +205,147 @@ export function performSwap(
   return moved;
 }
 
+/**
+ * Does this slot type match everything? LiteGraph.isValidConnection folds "",
+ * "*" and 0 into a wildcard. Auto-insert refuses to guess through a wildcard:
+ * reroutes and "any" switch nodes would report a match for every drop.
+ */
+export function isWildcardSlotType(type: SlotType): boolean {
+  return type == null || type === "" || type === "*" || type === 0;
+}
+
+/**
+ * Local mirror of LiteGraph.isValidConnection (LiteGraphGlobal.ts): wildcards
+ * match anything, comparison is case-insensitive, and comma-separated union
+ * types match if any permutation does. Used as the fallback when the real
+ * implementation is not reachable on `window.LiteGraph`.
+ */
+export function isTypeCompatible(outType: SlotType, inType: SlotType): boolean {
+  if (isWildcardSlotType(outType) || isWildcardSlotType(inType)) return true;
+  const a = String(outType).toLowerCase();
+  const b = String(inType).toLowerCase();
+  if (!a.includes(",") && !b.includes(",")) return a === b;
+  return a.split(",").some((x) => b.split(",").some((y) => isTypeCompatible(x, y)));
+}
+
+/**
+ * Pick the input to splice the taken-over output into — or -1 to skip.
+ *
+ * Deliberately narrow, because a wrong guess silently rewires a graph the user
+ * did not ask to touch. An input qualifies only when it is FREE (LiteGraph
+ * disconnects an occupied input without asking, destroying a link nobody
+ * mentioned) and CONCRETELY TYPED, and the whole thing is abandoned unless
+ * exactly ONE input qualifies — `image1`/`image2` style pairs are a coin flip,
+ * so they fall back to the plain takeover.
+ */
+export function findInsertInput(
+  inputs: ReadonlyArray<InputSlot> | undefined,
+  outputType: SlotType,
+  isCompatible: (outType: SlotType, inType: SlotType) => boolean,
+): number {
+  if (isWildcardSlotType(outputType) || !inputs) return -1;
+  let found = -1;
+  for (const [index, input] of inputs.entries()) {
+    if (input.link != null) continue;
+    if (isWildcardSlotType(input.type)) continue;
+    if (!isCompatible(outputType, input.type)) continue;
+    if (found !== -1) return -1; // ambiguous — two candidates, no way to pick
+    found = index;
+  }
+  return found;
+}
+
+/**
+ * Is `to` reachable by following links downstream from `from`? Nothing in the
+ * frontend guards against cycles — LGraphNode.connect blocks self-loops and
+ * type mismatches, LGraph has no ancestry check at all — so a splice that
+ * closes a loop produces a graph that only fails at queue time.
+ */
+export function reachesDownstream(
+  from: LiteNode,
+  to: LiteNode,
+  resolveLink: (id: number | string) => LinkRecord | undefined,
+  getNodeById: (id: number | string) => LiteNode | undefined,
+): boolean {
+  if (from === to) return true;
+  const seen = new Set<LiteNode>([from]);
+  const queue: LiteNode[] = [from];
+  while (queue.length > 0) {
+    const node = queue.pop() as LiteNode;
+    for (const output of node.outputs ?? []) {
+      for (const id of output.links ?? []) {
+        const link = resolveLink(id);
+        if (!link) continue;
+        const next = getNodeById(link.target_id);
+        if (next == null || seen.has(next)) continue;
+        if (next === to) return true;
+        seen.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Which input of `srcNode` should the taken-over output feed — or -1 for "leave
+ * it a plain takeover". Composes the four guards: concrete output type, a
+ * single free concretely-typed compatible input, and no cycle.
+ *
+ * Cycle detection is order-independent here: the takeover only removes links
+ * FROM the target's output (which a path INTO the target never traverses) and
+ * adds links from the source to nodes already downstream of the target, so the
+ * answer is the same whether this runs before or after performSwap — barring a
+ * cycle that was already in the graph.
+ */
+export function planInsertion(
+  srcNode: LiteNode,
+  targetNode: LiteNode,
+  outputType: SlotType,
+  ctx: {
+    resolveLink: (id: number | string) => LinkRecord | undefined;
+    getNodeById: (id: number | string) => LiteNode | undefined;
+    isCompatible: (outType: SlotType, inType: SlotType) => boolean;
+  },
+): number {
+  const index = findInsertInput(srcNode.inputs, outputType, ctx.isCompatible);
+  if (index === -1) return -1;
+  if (reachesDownstream(srcNode, targetNode, ctx.resolveLink, ctx.getNodeById)) return -1;
+  return index;
+}
+
 // ============================================================
 // Wiring (canvas events + draw; browser-matrix tested)
 // ============================================================
 
 let enabled = true;
+let autoInsert = true;
 
 function getCanvas(): LiteCanvas | undefined {
   return (app as unknown as { canvas?: LiteCanvas }).canvas;
+}
+
+/**
+ * Prefer LiteGraph's own type check (ComfyUI's useGlobalLitegraph puts the
+ * LiteGraph global on `window`) so the pack tracks any future change to the
+ * type system; fall back to the local mirror when it is absent.
+ */
+function getIsCompatible(): (outType: SlotType, inType: SlotType) => boolean {
+  const global = (globalThis as { LiteGraph?: { isValidConnection?: unknown } }).LiteGraph;
+  const native = global?.isValidConnection;
+  if (typeof native !== "function") return isTypeCompatible;
+  return (outType, inType) => {
+    try {
+      return (native as (a: SlotType, b: SlotType) => boolean).call(global, outType, inType);
+    } catch {
+      return isTypeCompatible(outType, inType);
+    }
+  };
+}
+
+/** Alt held during the drag suppresses the splice for this gesture only. */
+function insertSuppressed(altKey: boolean | undefined): boolean {
+  return !autoInsert || altKey === true;
 }
 
 function resolveLink(graph: LiteGraph, id: number | string): LinkRecord | undefined {
@@ -197,7 +359,7 @@ function resolveLink(graph: LiteGraph, id: number | string): LinkRecord | undefi
 /** The output slot currently under the pointer during a source-output drag. */
 function hoveredOutput(
   canvas: LiteCanvas,
-): { node: LiteNode; index: number; outSlot: OutputSlot } | null {
+): { node: LiteNode; index: number; outSlot: OutputSlot; srcNode: LiteNode } | null {
   const lc = canvas.linkConnector;
   if (!lc?.isConnecting || lc.state?.connectingTo !== "input") return null;
   const first = lc.renderLinks?.[0];
@@ -208,7 +370,14 @@ function hoveredOutput(
   for (const node of nodes) {
     if (node === first.node) continue; // never target the source itself
     const outSlot = node.getOutputOnPos?.([mouse[0], mouse[1]]);
-    if (outSlot) return { node, index: node.outputs?.indexOf(outSlot) ?? -1, outSlot };
+    if (outSlot) {
+      return {
+        node,
+        index: node.outputs?.indexOf(outSlot) ?? -1,
+        outSlot,
+        srcNode: first.node,
+      };
+    }
   }
   return null;
 }
@@ -226,11 +395,33 @@ function drawRing(ctx: CanvasRenderingContext2D, p: Vec2, r: number): void {
   ctx.stroke();
 }
 
+/** A cyan bezier from `a` to `b` using LiteGraph's native control distance. */
+function drawWire(ctx: CanvasRenderingContext2D, a: Vec2, b: Vec2, dash: number[]): void {
+  const cd = bezierControlDistance(a, b);
+  const bezier = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.bezierCurveTo(a[0] + cd, a[1], b[0] - cd, b[1], b[0], b[1]);
+    ctx.stroke();
+  };
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "rgba(38,208,255,0.28)";
+  ctx.lineWidth = 8;
+  bezier(); // glow underlay
+  ctx.setLineDash(dash);
+  ctx.strokeStyle = HL;
+  ctx.lineWidth = 2.5;
+  bezier(); // dashed core
+}
+
 /**
  * Hover affordance: mark the takeover output, the wires it will steal, and
- * their (possibly off-screen) input endpoints. Drawn in graph space by
- * onDrawForeground; wires use the native control distance so the overlay lands
- * on the real wire when no custom link renderer is active.
+ * their (possibly off-screen) input endpoints — plus, when auto-insert applies,
+ * the wire back into the dragged node's input. The splice must be previewed:
+ * otherwise the same gesture does one of two things depending on slot layout
+ * the user cannot see. Drawn in graph space by onDrawForeground; wires use the
+ * native control distance so the overlay lands on the real wire when no custom
+ * link renderer is active.
  */
 function drawHint(canvas: LiteCanvas, ctx: CanvasRenderingContext2D): void {
   const hit = hoveredOutput(canvas);
@@ -244,23 +435,25 @@ function drawHint(canvas: LiteCanvas, ctx: CanvasRenderingContext2D): void {
     const dst = link ? graph.getNodeById(link.target_id) : undefined;
     if (!link || !dst) continue;
     const b = dst.getInputPos(link.target_slot);
-    const cd = bezierControlDistance(a, b);
-    const bezier = (): void => {
-      ctx.beginPath();
-      ctx.moveTo(a[0], a[1]);
-      ctx.bezierCurveTo(a[0] + cd, a[1], b[0] - cd, b[1], b[0], b[1]);
-      ctx.stroke();
-    };
-    ctx.setLineDash([]);
-    ctx.strokeStyle = "rgba(38,208,255,0.28)";
-    ctx.lineWidth = 8;
-    bezier(); // glow underlay
-    ctx.setLineDash([9, 6]);
-    ctx.strokeStyle = HL;
-    ctx.lineWidth = 2.5;
-    bezier(); // dashed core
+    drawWire(ctx, a, b, [9, 6]); // long dashes: links moving off this output
     drawRing(ctx, b, 7);
   }
+
+  // The splice preview, in finer dashes to read as "created" rather than
+  // "moved". Only shown when the drop would actually make it (same guards).
+  if (linkIds.length > 0 && !insertSuppressed(canvas.pointer?.eMove?.altKey)) {
+    const inputIndex = planInsertion(hit.srcNode, hit.node, hit.outSlot.type, {
+      resolveLink: (id) => resolveLink(graph, id),
+      getNodeById: (id) => graph.getNodeById(id),
+      isCompatible: getIsCompatible(),
+    });
+    if (inputIndex !== -1) {
+      const dst = hit.srcNode.getInputPos(inputIndex);
+      drawWire(ctx, a, dst, [4, 4]);
+      drawRing(ctx, dst, 7);
+    }
+  }
+
   drawRing(ctx, a, 9);
   ctx.restore();
 }
@@ -271,7 +464,7 @@ function onDropOnNode(canvas: LiteCanvas, e: Event): void {
   if (!lc) return;
   try {
     const detail = (e as CustomEvent).detail as
-      | { node?: LiteNode; event?: { canvasX: number; canvasY: number } }
+      | { node?: LiteNode; event?: { canvasX: number; canvasY: number; altKey?: boolean } }
       | undefined;
     const targetNode = detail?.node;
     const inner = detail?.event;
@@ -294,13 +487,31 @@ function onDropOnNode(canvas: LiteCanvas, e: Event): void {
     const linkIds = outSlot.links ? [...outSlot.links] : []; // snapshot before mutating
     if (linkIds.length === 0) return;
 
-    const targets = collectDownstream(
-      linkIds,
-      (id) => resolveLink(graph, id),
-      (id) => graph.getNodeById(id),
-    );
+    const resolve = (id: number | string): LinkRecord | undefined => resolveLink(graph, id);
+    const byId = (id: number | string): LiteNode | undefined => graph.getNodeById(id);
+
+    const targets = collectDownstream(linkIds, resolve, byId);
     const moved = performSwap(srcNode, first.fromSlotIndex, targets);
-    console.info(`[${EXT_NAME}] moved ${moved}/${linkIds.length} link(s) -> "${srcNode.title}"`);
+
+    // Splice the source into the stream it just took over. Runs after the swap
+    // so the cycle check sees the graph the user will actually be left with.
+    let spliced = false;
+    if (!insertSuppressed(inner.altKey)) {
+      const outIndex = targetNode.outputs?.indexOf(outSlot) ?? -1;
+      const inputIndex = planInsertion(srcNode, targetNode, outSlot.type, {
+        resolveLink: resolve,
+        getNodeById: byId,
+        isCompatible: getIsCompatible(),
+      });
+      if (outIndex !== -1 && inputIndex !== -1) {
+        spliced = !!targetNode.connect(outIndex, srcNode, inputIndex);
+      }
+    }
+
+    console.info(
+      `[${EXT_NAME}] moved ${moved}/${linkIds.length} link(s) -> "${srcNode.title}"` +
+        (spliced ? ` (spliced in after "${targetNode.title}")` : ""),
+    );
     graph.setDirtyCanvas?.(true, true);
   } catch (err) {
     console.warn(`[${EXT_NAME}] drop error, native fallback`, err);
@@ -354,6 +565,17 @@ app.registerExtension({
       // value, so this both initializes and live-toggles `enabled`.
       onChange: (value: boolean) => {
         enabled = value !== false;
+      },
+    },
+    {
+      id: AUTO_INSERT_SETTING_ID,
+      name: "Output swap: also splice the dragged node into the stream",
+      tooltip:
+        "After a takeover, wire the taken-over output back into the dragged node's own input, inserting it between. Only fires when that input is unambiguous, free, concretely typed, and would not create a cycle. Hold Alt while dropping to skip it for one gesture.",
+      type: "boolean",
+      defaultValue: true,
+      onChange: (value: boolean) => {
+        autoInsert = value !== false;
       },
     },
   ],
