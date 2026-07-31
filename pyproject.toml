@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-output-swap"
 description = "Drag one output onto another to take over its downstream links — reroute a connection's source without hunting for the target input."
-version = "0.1.2"
+version = "0.1.3"
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
