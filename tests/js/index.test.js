@@ -5,8 +5,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bezierControlDistance,
   collectDownstream,
+  findInsertInput,
   isOutputSlotHit,
+  isTypeCompatible,
+  isWildcardSlotType,
   performSwap,
+  planInsertion,
+  reachesDownstream,
 } from "../../src/index.ts";
 
 describe("comfyui-output-swap helpers", () => {
@@ -72,6 +77,141 @@ describe("comfyui-output-swap helpers", () => {
         { node: { ok: false }, slot: 1 },
       ];
       expect(performSwap({ connect }, 0, targets)).toBe(1);
+    });
+  });
+
+  describe("isWildcardSlotType", () => {
+    it("folds LiteGraph's three wildcard spellings, and only those", () => {
+      for (const t of ["", "*", 0, null, undefined]) expect(isWildcardSlotType(t)).toBe(true);
+      for (const t of ["IMAGE", "MODEL", "IMAGE,LATENT"]) expect(isWildcardSlotType(t)).toBe(false);
+    });
+  });
+
+  describe("isTypeCompatible", () => {
+    it("matches identical types case-insensitively", () => {
+      expect(isTypeCompatible("IMAGE", "IMAGE")).toBe(true);
+      expect(isTypeCompatible("IMAGE", "image")).toBe(true);
+      expect(isTypeCompatible("IMAGE", "LATENT")).toBe(false);
+    });
+
+    it("treats wildcards as matching anything", () => {
+      expect(isTypeCompatible("IMAGE", "*")).toBe(true);
+      expect(isTypeCompatible("*", "MODEL")).toBe(true);
+      expect(isTypeCompatible("IMAGE", "")).toBe(true);
+    });
+
+    it("matches comma-separated union types on any permutation", () => {
+      expect(isTypeCompatible("IMAGE,MASK", "MASK")).toBe(true);
+      expect(isTypeCompatible("IMAGE", "LATENT,IMAGE")).toBe(true);
+      expect(isTypeCompatible("IMAGE,MASK", "MODEL,CLIP")).toBe(false);
+    });
+  });
+
+  describe("findInsertInput", () => {
+    const free = (type) => ({ type, link: null });
+
+    it("picks the single free, compatible, concretely-typed input", () => {
+      const inputs = [free("MODEL"), free("IMAGE"), free("LATENT")];
+      expect(findInsertInput(inputs, "IMAGE", isTypeCompatible)).toBe(1);
+    });
+
+    it("refuses when two inputs qualify — image1/image2 is a coin flip", () => {
+      const inputs = [free("IMAGE"), free("IMAGE")];
+      expect(findInsertInput(inputs, "IMAGE", isTypeCompatible)).toBe(-1);
+    });
+
+    it("skips occupied inputs rather than destroying an existing link", () => {
+      const inputs = [{ type: "IMAGE", link: 7 }, free("IMAGE")];
+      expect(findInsertInput(inputs, "IMAGE", isTypeCompatible)).toBe(1);
+      expect(findInsertInput([{ type: "IMAGE", link: 7 }], "IMAGE", isTypeCompatible)).toBe(-1);
+    });
+
+    it("skips wildcard inputs — a '*' slot would match every drop", () => {
+      expect(findInsertInput([free("*"), free("")], "IMAGE", isTypeCompatible)).toBe(-1);
+    });
+
+    it("refuses to guess from a wildcard output type", () => {
+      expect(findInsertInput([free("IMAGE")], "*", isTypeCompatible)).toBe(-1);
+    });
+
+    it("handles a node with no inputs at all", () => {
+      expect(findInsertInput(undefined, "IMAGE", isTypeCompatible)).toBe(-1);
+      expect(findInsertInput([], "IMAGE", isTypeCompatible)).toBe(-1);
+    });
+  });
+
+  describe("reachesDownstream", () => {
+    // a -> b -> c, plus an isolated d
+    const c = { title: "c", outputs: [] };
+    const b = { title: "b", outputs: [{ links: [2] }] };
+    const a = { title: "a", outputs: [{ links: [1] }] };
+    const d = { title: "d", outputs: [] };
+    const links = { 1: { target_id: "b" }, 2: { target_id: "c" } };
+    const nodes = { a, b, c, d };
+    const resolveLink = (id) => links[id];
+    const getNodeById = (id) => nodes[id];
+
+    it("finds direct and transitive descendants", () => {
+      expect(reachesDownstream(a, b, resolveLink, getNodeById)).toBe(true);
+      expect(reachesDownstream(a, c, resolveLink, getNodeById)).toBe(true);
+    });
+
+    it("does not walk upstream or reach disconnected nodes", () => {
+      expect(reachesDownstream(c, a, resolveLink, getNodeById)).toBe(false);
+      expect(reachesDownstream(a, d, resolveLink, getNodeById)).toBe(false);
+    });
+
+    it("reports a node as reaching itself", () => {
+      expect(reachesDownstream(a, a, resolveLink, getNodeById)).toBe(true);
+    });
+
+    it("terminates on a graph that already contains a cycle", () => {
+      const x = { outputs: [{ links: [10] }] };
+      const y = { outputs: [{ links: [11] }] };
+      const cyclic = { 10: { target_id: "y" }, 11: { target_id: "x" } };
+      expect(
+        reachesDownstream(
+          x,
+          { title: "elsewhere" },
+          (id) => cyclic[id],
+          (id) => (id === "x" ? x : y),
+        ),
+      ).toBe(false);
+    });
+
+    it("skips dangling links and missing nodes", () => {
+      const orphan = { outputs: [{ links: [99] }] };
+      expect(reachesDownstream(orphan, a, resolveLink, getNodeById)).toBe(false);
+    });
+  });
+
+  describe("planInsertion", () => {
+    const ctx = (links = {}, nodes = {}) => ({
+      resolveLink: (id) => links[id],
+      getNodeById: (id) => nodes[id],
+      isCompatible: isTypeCompatible,
+    });
+
+    it("returns the input index when every guard passes", () => {
+      const src = { inputs: [{ type: "IMAGE", link: null }], outputs: [] };
+      const target = { outputs: [{ type: "IMAGE", links: [] }] };
+      expect(planInsertion(src, target, "IMAGE", ctx())).toBe(0);
+    });
+
+    it("refuses when the splice would close a cycle (src is upstream of target)", () => {
+      const target = { inputs: [], outputs: [{ type: "IMAGE", links: [] }] };
+      const src = {
+        inputs: [{ type: "IMAGE", link: null }],
+        outputs: [{ links: [1] }], // src -> target already
+      };
+      const links = { 1: { target_id: "target" } };
+      expect(planInsertion(src, target, "IMAGE", ctx(links, { target }))).toBe(-1);
+    });
+
+    it("refuses when no input qualifies, without walking the graph", () => {
+      const src = { inputs: [{ type: "MODEL", link: null }], outputs: [] };
+      const target = { outputs: [] };
+      expect(planInsertion(src, target, "IMAGE", ctx())).toBe(-1);
     });
   });
 });
