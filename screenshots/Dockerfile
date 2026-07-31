@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.26
 #
 # Single-stage build for the README screenshot generator. Base image: the
 # official Playwright image (Node 22 + Chromium pre-installed). On top we
