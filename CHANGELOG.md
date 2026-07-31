@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.2...comfyui-output-swap-v0.1.3) (2026-07-31)
+
+
+### Features
+
+* splice the dragged node into the stream it takes over ([#14](https://github.com/laurigates/comfyui-output-swap/issues/14)) ([892f263](https://github.com/laurigates/comfyui-output-swap/commit/892f2633d4604865d0520e47778a03a8a84540a3))
+
 ## [0.1.2](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.1...comfyui-output-swap-v0.1.2) (2026-07-30)
 
 
