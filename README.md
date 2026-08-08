@@ -50,8 +50,8 @@ rewire a graph you didn't ask to touch. It only happens when:
 
 Otherwise you get the plain takeover. Hold **Alt** while dropping to skip the
 splice for one gesture (when you want the old branch left dangling and out of
-the execution path), or turn it off entirely with the **Output swap: also
-splice** setting.
+the execution path), or turn it off entirely with the **Also splice the dragged
+node into the stream** setting, under **Settings → Touch Tools → Output Swap**.
 
 While you drag, a hover affordance shows exactly what will happen: a cyan ring
 on the takeover-target output, dashed cyan wires to each downstream input, a
