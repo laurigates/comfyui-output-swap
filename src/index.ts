@@ -553,10 +553,42 @@ function installOutputSwap(): void {
 
 app.registerExtension({
   name: "comfy.output-swap",
+  // Settings live under the family's shared "Touch Tools" category — keep the
+  // literal in sync with FAMILY_SETTINGS_CATEGORY in @laurigates/comfy-modal-kit
+  // (this pack stays kit-free by design: it is a canvas-gesture pack with no
+  // modal). For the same reason it registers NO Touch Tools hub entry — there is
+  // nothing to open, which is precisely why it can never become a dead row in
+  // the hub chooser.
+  //
+  // Three invariants hold for every entry below:
+  //
+  //  1. The `id`s are FROZEN. Persistence is keyed on `id` alone end-to-end
+  //     (settingStore.ts:78/142/157/199) and `category` is read only by
+  //     getSettingInfo (:16-22) for the nav highlight and search facets — never
+  //     by the load/store path. So re-keying `category` is value-safe in both
+  //     directions, but changing an `id` would silently reset a user's
+  //     preference.
+  //  2. Each `category` array is THREE elements with a DISTINCT third. Two
+  //     settings sharing an identical full category path SILENTLY COLLAPSE into
+  //     one: buildTree reuses the node at that path and unconditionally
+  //     overwrites `parent.data` (treeUtil.ts:24-38). The first vanishes from
+  //     the dialog while its value stays stored — no warning, no throw.
+  //  3. `sortOrder` is NOT cosmetic. flattenTree pops a stack (treeUtil.ts:57-66)
+  //     so settings render in REVERSE registration order, and the settings sort
+  //     is stable on all-zero sortOrder (SettingDialog.vue:191-195). Without the
+  //     explicit descending values below, the dependent `autoInsert` renders
+  //     ABOVE the master `enable` it depends on (reproduced by executing the
+  //     real frontend code). 100 is the family-wide per-group maximum, which
+  //     keeps the group ordering alphabetical.
+  //
+  // The `name` strings drop the old "Output swap: " prefix — the new group
+  // heading supplies the pack name.
   settings: [
     {
       id: SETTING_ID,
-      name: "Output swap: drag an output onto another to take over its links",
+      category: ["Touch Tools", "Output Swap", "Enable"],
+      sortOrder: 100,
+      name: "Drag an output onto another to take over its links",
       tooltip:
         "Drop one output onto another node's output slot of the same type to re-home all of that output's downstream links to the dragged source.",
       type: "boolean",
@@ -569,7 +601,9 @@ app.registerExtension({
     },
     {
       id: AUTO_INSERT_SETTING_ID,
-      name: "Output swap: also splice the dragged node into the stream",
+      category: ["Touch Tools", "Output Swap", "Auto-insert"],
+      sortOrder: 90,
+      name: "Also splice the dragged node into the stream",
       tooltip:
         "After a takeover, wire the taken-over output back into the dragged node's own input, inserting it between. Only fires when that input is unambiguous, free, concretely typed, and would not create a cycle. Hold Alt while dropping to skip it for one gesture.",
       type: "boolean",
