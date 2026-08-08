@@ -284,7 +284,9 @@ app.registerExtension({
   settings: [
     {
       id: SETTING_ID,
-      name: "Output swap: drag an output onto another to take over its links",
+      category: ["Touch Tools", "Output Swap", "Enable"],
+      sortOrder: 100,
+      name: "Drag an output onto another to take over its links",
       tooltip: "Drop one output onto another node's output slot of the same type to re-home all of that output's downstream links to the dragged source.",
       type: "boolean",
       defaultValue: true,
@@ -294,7 +296,9 @@ app.registerExtension({
     },
     {
       id: AUTO_INSERT_SETTING_ID,
-      name: "Output swap: also splice the dragged node into the stream",
+      category: ["Touch Tools", "Output Swap", "Auto-insert"],
+      sortOrder: 90,
+      name: "Also splice the dragged node into the stream",
       tooltip: "After a takeover, wire the taken-over output back into the dragged node's own input, inserting it between. Only fires when that input is unambiguous, free, concretely typed, and would not create a cycle. Hold Alt while dropping to skip it for one gesture.",
       type: "boolean",
       defaultValue: true,
