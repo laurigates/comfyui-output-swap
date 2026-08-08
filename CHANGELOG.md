@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.4...comfyui-output-swap-v0.1.5) (2026-08-08)
+
+
+### Documentation
+
+* name the setting as it now reads, and where it now lives ([#19](https://github.com/laurigates/comfyui-output-swap/issues/19)) ([3339ae9](https://github.com/laurigates/comfyui-output-swap/commit/3339ae9e9e4bfda2077cbabd9bd9129a27757288))
+
 ## [0.1.4](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.3...comfyui-output-swap-v0.1.4) (2026-08-08)
 
 
