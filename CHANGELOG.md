@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.3...comfyui-output-swap-v0.1.4) (2026-08-08)
+
+
+### Bug Fixes
+
+* **settings:** file Output Swap under the Touch Tools category ([#17](https://github.com/laurigates/comfyui-output-swap/issues/17)) ([c99de27](https://github.com/laurigates/comfyui-output-swap/commit/c99de275aa62dce42bb62a483d5240bdb9110dc8))
+
 ## [0.1.3](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.2...comfyui-output-swap-v0.1.3) (2026-07-31)
 
 
