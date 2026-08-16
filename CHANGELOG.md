@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.5...comfyui-output-swap-v0.1.6) (2026-08-16)
+
+
+### Miscellaneous
+
+* **ci:** guard registry-health against closing on Pending; drop duplicate Renovate runner ([#22](https://github.com/laurigates/comfyui-output-swap/issues/22)) ([c2720c8](https://github.com/laurigates/comfyui-output-swap/commit/c2720c8c6927d835a9bde54bd95061d76fe0de00))
+
 ## [0.1.5](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.4...comfyui-output-swap-v0.1.5) (2026-08-08)
 
 
