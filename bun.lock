@@ -6,7 +6,7 @@
       "name": "comfyui-output-swap",
       "devDependencies": {
         "@biomejs/biome": "^2.4.15",
-        "@comfyorg/comfyui-frontend-types": "~1.45.0",
+        "@comfyorg/comfyui-frontend-types": "~1.54.0",
         "knip": "^5.0.0",
         "typescript": "^5.7.0",
         "vitest": "^4.1.7",
@@ -40,9 +40,9 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.5.5", "", { "os": "win32", "cpu": "x64" }, "sha512-bIBFo+n6MIxdNcVFy5CrurbKiZQiUciK3bt8+O9I4wjFZNTfXLpi+giq47522eXqW5NBc9ulx7dR1SlZKi2J5g=="],
 
-    "@comfyorg/comfyui-desktop-bridge-types": ["@comfyorg/comfyui-desktop-bridge-types@0.1.2", "", {}, "sha512-yU2xerunYGDM+IF8MCrEAQGE2C/9mX8Dec7xAwsMmHUriY1GBhZJO9hjjLmHnSh4O4qTpzfO5AJgo2d0jzdDNA=="],
+    "@comfyorg/comfyui-desktop-bridge-types": ["@comfyorg/comfyui-desktop-bridge-types@0.2.0", "", {}, "sha512-V5Wj5KXDzTDm5GJAa0xBISjmndNIY5P79pRHQbLkkqJxgp/GPb/QGvcI+xG4ogol0ODJ4j/UBnUmkzpSafw8Aw=="],
 
-    "@comfyorg/comfyui-frontend-types": ["@comfyorg/comfyui-frontend-types@1.45.21", "", { "dependencies": { "@comfyorg/comfyui-desktop-bridge-types": "0.1.2" }, "peerDependencies": { "vue": "^3.5.13", "zod": "^3.23.8" } }, "sha512-n6KcfY2npHkpzTtJNHtwgHRznkD8eSDvc+tmyRGaoGTljQq4R0h/AD6tsw4h28/X7EF4RiuO9zqb4BWLwXOG2Q=="],
+    "@comfyorg/comfyui-frontend-types": ["@comfyorg/comfyui-frontend-types@1.54.5", "", { "dependencies": { "@comfyorg/comfyui-desktop-bridge-types": "0.2.0" }, "peerDependencies": { "vue": "^3.5.40", "zod": "^3.23.8" } }, "sha512-NU/KX58+cdu4ThnLvQcTYKwtFrBu1FJFgH1uBQ/c+7PpdKRN7gAC1eDQmpf8kAjin+F0GxYVi5N4QVglRTJ+hA=="],
 
     "@emnapi/core": ["@emnapi/core@1.11.2", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.2", "tslib": "^2.4.0" } }, "sha512-TC8MkTuZUtcTSiFeuC0ksCh9QIJ5+F21MvZ4Wn4ORfYaFJ/0dsiudv5tVkejgwZlwQ39jL9WWDe2lz8x0WglOA=="],
 
