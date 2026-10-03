@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "@comfyorg/comfyui-frontend-types": "~1.45.0",
+    "@comfyorg/comfyui-frontend-types": "~1.54.0",
     "@biomejs/biome": "^2.4.15",
     "vitest": "^4.1.7",
     "knip": "^5.0.0"
