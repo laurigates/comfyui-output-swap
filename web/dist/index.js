@@ -312,13 +312,13 @@ app.registerExtension({
   }
 });
 export {
-  reachesDownstream,
-  planInsertion,
-  performSwap,
-  isWildcardSlotType,
-  isTypeCompatible,
-  isOutputSlotHit,
-  findInsertInput,
+  bezierControlDistance,
   collectDownstream,
-  bezierControlDistance
+  findInsertInput,
+  isOutputSlotHit,
+  isTypeCompatible,
+  isWildcardSlotType,
+  performSwap,
+  planInsertion,
+  reachesDownstream
 };
