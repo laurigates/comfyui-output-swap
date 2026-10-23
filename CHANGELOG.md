@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.6...comfyui-output-swap-v0.1.7) (2026-10-23)
+
+
+### Bug Fixes
+
+* **types:** move @comfyorg/comfyui-frontend-types to ~1.59.1 ([#27](https://github.com/laurigates/comfyui-output-swap/issues/27)) ([b821a31](https://github.com/laurigates/comfyui-output-swap/commit/b821a31ee95963cc4297619daf606ab8c0af2e69)), closes [#24](https://github.com/laurigates/comfyui-output-swap/issues/24)
+
 ## [0.1.6](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.5...comfyui-output-swap-v0.1.6) (2026-08-16)
 
 
