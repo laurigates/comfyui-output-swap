@@ -38,11 +38,17 @@
 // emitted import string stays `/scripts/app.js` (bun's `--external '/scripts/*'`
 // keeps it unbundled); the type is supplied via a `paths` mapping in
 // tsconfig.json that points the import at `src/comfyui-shims.d.ts`. See ADR-0001.
+import type { Settings } from "@comfyorg/comfyui-frontend-types";
 import { app } from "/scripts/app.js";
 
 const EXT_NAME = "comfyui-output-swap";
-const SETTING_ID = "OutputSwap.enable";
-const AUTO_INSERT_SETTING_ID = "OutputSwap.autoInsert";
+// `@comfyorg/comfyui-frontend-types` >= 1.59 types setting ids as
+// `keyof Settings`, and `Settings` is a closed `type` alias listing only the
+// core `Comfy.*` keys. A type alias cannot be augmented (only interfaces
+// merge), so an extension's own setting id needs this cast. The runtime
+// settings store accepts any string id.
+const SETTING_ID = "OutputSwap.enable" as keyof Settings;
+const AUTO_INSERT_SETTING_ID = "OutputSwap.autoInsert" as keyof Settings;
 
 // Highlight colour for the takeover affordance. Distinct from LiteGraph's
 // native input-slot hover marker (a solid gold #ffcc00 dot) so the two read
