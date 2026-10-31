@@ -12,10 +12,10 @@
     "knip": "knip"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "@comfyorg/comfyui-frontend-types": "~1.59.1",
-    "@biomejs/biome": "^2.4.15",
-    "vitest": "^4.1.7",
-    "knip": "^5.0.0"
+    "typescript": "5.9.3",
+    "@comfyorg/comfyui-frontend-types": "1.59.1",
+    "@biomejs/biome": "2.6.4",
+    "vitest": "4.1.12",
+    "knip": "5.88.1"
   }
 }
