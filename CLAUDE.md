@@ -95,6 +95,7 @@ assume). Recheck on a bump:
 | ComfyUI publishes `window.LiteGraph` (`useGlobalLitegraph`) | app bundle | Lets the pack use the real `isValidConnection`, with a local mirror as fallback. |
 | `dropped-on-node` detail is `{ node, event }`, `event` a `CanvasPointerEvent` | `canvas/LinkConnector.ts` `connectToNode` | Carries `canvasX`/`canvasY` **and** the modifier keys (`altKey`). |
 | `canvas.pointer` is a `CanvasPointer`; `.eMove` is the live drag's pointermove | `LGraphCanvas.ts` / `CanvasPointer.ts` | Reads Alt mid-drag for the hover hint without adding a global key listener. |
+| Shift-press on an output with links calls `linkConnector.moveOutputLink`: `connectingTo = 'output'`, and an output-slot drop goes straight to `_dropOnOutput` without dispatching `dropped-on-node` (rechecked at 1.59.15, also Vue nodes' `useSlotLinkInteraction` `moveExisting`) | `LGraphCanvas.ts` / `canvas/LinkConnector.ts` `dropOnNode` | The push direction ("move B's links to C", #39) is native. Do not add a competing gesture; the `connectingTo === 'input'` guards keep this pack out of that drag. |
 
 Facts worth confirming this way (recheck on a `comfyui-frontend-package` bump):
 `LiteGraph.NODE_TITLE_HEIGHT` (30); `canvas.selectedItems` is a

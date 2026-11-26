@@ -60,6 +60,19 @@ splice applies — a finer-dashed wire back into the input it will fill. Droppin
 anywhere that isn't an output slot does nothing special — native behavior
 runs — and the whole feature toggles off via the **Output swap** setting.
 
+### The other direction: moving an output's links away
+
+To push links the other way (move everything `B` feeds onto `C`, giving
+`C → A, C → X`), use the frontend's own **Shift-drag**: hold **Shift**, press
+on `B`'s output, and drop on `C`'s output. LiteGraph picks up every link on
+that output and re-homes each compatible one to the drop target. This works in
+both the classic canvas and Vue nodes mode, so this pack does not add a
+duplicate gesture for it, and it does not intercept that drag.
+
+Without a keyboard (touch), the same result comes from this pack's gesture in
+the pull direction: drag `C`'s output onto `B`'s with the splice suppressed
+(Alt-drop, or the auto-insert setting off).
+
 Additive and fail-soft: it hooks the canvas connection event without clobbering
 other extensions, coexists with `quick-connections` (Circuit Board Lines), and
 only ever moves the links you asked it to.
