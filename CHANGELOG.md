@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.8](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.7...comfyui-output-swap-v0.1.8) (2026-11-26)
+
+
+### Bug Fixes
+
+* **deps:** update dependency playwright to v1.55.1 [security] ([#30](https://github.com/laurigates/comfyui-output-swap/issues/30)) ([b2bf3bb](https://github.com/laurigates/comfyui-output-swap/commit/b2bf3bb6cd47bd2ff39624938b7fa1b1b95d6056))
+
+
+### Miscellaneous
+
+* **claude:** reconcile Claude Code config with the repo baseline ([#35](https://github.com/laurigates/comfyui-output-swap/issues/35)) ([4231dda](https://github.com/laurigates/comfyui-output-swap/commit/4231dda34442ba61b166eb8118fad74ffc2dcaaa))
+* **deps:** update dependency virtualenv to v21.14.10 [security] ([#38](https://github.com/laurigates/comfyui-output-swap/issues/38)) ([5d2b969](https://github.com/laurigates/comfyui-output-swap/commit/5d2b9692944c22a980bf1a5f093471f67d31bfcf))
+
 ## [0.1.7](https://github.com/laurigates/comfyui-output-swap/compare/comfyui-output-swap-v0.1.6...comfyui-output-swap-v0.1.7) (2026-10-23)
 
 
